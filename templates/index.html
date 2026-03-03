@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vajra AI — Security Expert</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Syntax highlighting -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <div class="logo">
+            <div class="logo-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <circle cx="12" cy="12" r="4" fill="currentColor" />
+                <line
+                  x1="12"
+                  y1="2"
+                  x2="12"
+                  y2="6"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <line
+                  x1="12"
+                  y1="18"
+                  x2="12"
+                  y2="22"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <line
+                  x1="2"
+                  y1="12"
+                  x2="6"
+                  y2="12"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <line
+                  x1="18"
+                  y1="12"
+                  x2="22"
+                  y2="12"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
+            </div>
+            <span class="logo-text">Vajra AI</span>
+          </div>
+          <button class="new-chat-btn" id="newChatBtn" title="New Chat">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="sidebar-search">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Search conversations..."
+          />
+        </div>
+
+        <div class="conversation-list" id="conversationList">
+          <!-- Conversations will be populated here -->
+        </div>
+
+        <div class="sidebar-footer">
+          <div class="model-selector">
+            <label>Model</label>
+            <select id="modelSelect">
+              <optgroup label="Vajra Security Models">
+                <option value="vajra-blue" selected>
+                  🛡️ Vajra Blue — Defense
+                </option>
+                <option value="vajra-red">⚔️ Vajra Red — Offense</option>
+                <option value="vajra-hunter">
+                  🎯 Vajra Hunter — Bug Bounty
+                </option>
+              </optgroup>
+              <optgroup label="Claude (API Key Required)">
+                <option value="claude-opus-4-5">Claude Opus 4.5</option>
+                <option value="claude-sonnet-4">Claude Sonnet 4</option>
+              </optgroup>
+            </select>
+          </div>
+          <button class="settings-btn" id="settingsBtn">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <circle cx="12" cy="12" r="3"></circle>
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+              ></path>
+            </svg>
+            Settings
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Chat Area -->
+      <main class="main-content">
+        <!-- Top Bar -->
+        <header class="top-bar">
+          <button class="menu-btn" id="menuBtn" title="Toggle Sidebar">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <h1 class="chat-title" id="chatTitle">New Conversation</h1>
+          <div class="top-bar-actions">
+            <button
+              class="icon-btn tools-toggle-btn"
+              id="toolsToggleBtn"
+              title="Security Tools"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path
+                  d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+                ></path>
+              </svg>
+            </button>
+            <button
+              class="icon-btn"
+              id="deleteConvBtn"
+              title="Delete Conversation"
+              style="display: none"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <polyline points="3,6 5,6 21,6"></polyline>
+                <path
+                  d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"
+                ></path>
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <!-- Messages Area -->
+        <div class="messages-container" id="messagesContainer">
+          <!-- Welcome Screen (shown when no messages) -->
+          <div class="welcome-screen" id="welcomeScreen">
+            <div class="welcome-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  opacity="0.6"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="4"
+                  fill="currentColor"
+                  opacity="0.8"
+                />
+                <line
+                  x1="12"
+                  y1="2"
+                  x2="12"
+                  y2="6"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  opacity="0.6"
+                />
+                <line
+                  x1="12"
+                  y1="18"
+                  x2="12"
+                  y2="22"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  opacity="0.6"
+                />
+                <line
+                  x1="2"
+                  y1="12"
+                  x2="6"
+                  y2="12"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  opacity="0.6"
+                />
+                <line
+                  x1="18"
+                  y1="12"
+                  x2="22"
+                  y2="12"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  opacity="0.6"
+                />
+              </svg>
+            </div>
+            <h2 id="welcomeTitle">AI-Driven Security Expert</h2>
+            <p id="welcomeDesc">
+              I'm Vajra — your AI security specialist. Switch models for Blue
+              Team defense, Red Team offense, or Bug Bounty hunting.
+            </p>
+            <div class="quick-actions" id="quickActions">
+              <button
+                class="quick-action"
+                data-prompt="How do I set up a SOC with SIEM, EDR and threat hunting capabilities?"
+              >
+                <span class="qa-icon">🛡️</span>
+                <span class="qa-text">SOC Setup</span>
+              </button>
+              <button
+                class="quick-action"
+                data-prompt="Create an incident response playbook for ransomware attacks"
+              >
+                <span class="qa-icon">🚨</span>
+                <span class="qa-text">IR Playbook</span>
+              </button>
+              <button
+                class="quick-action"
+                data-prompt="Guide me through a web application penetration test methodology"
+              >
+                <span class="qa-icon">🌐</span>
+                <span class="qa-text">Web Pentest</span>
+              </button>
+              <button
+                class="quick-action"
+                data-prompt="How to get started with bug bounty hunting and find my first vulnerability?"
+              >
+                <span class="qa-icon">🎯</span>
+                <span class="qa-text">Bug Bounty</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Messages will be inserted here -->
+          <div class="messages" id="messages"></div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-area">
+          <div class="input-container">
+            <textarea
+              id="messageInput"
+              placeholder="Describe your security objective..."
+              rows="1"
+              autofocus
+            ></textarea>
+            <button class="send-btn" id="sendBtn" disabled title="Send message">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22,2 15,22 11,13 2,9"></polygon>
+              </svg>
+            </button>
+          </div>
+          <p class="input-hint">
+            Vajra can make mistakes. Consider verifying important information.
+          </p>
+        </div>
+      </main>
+    </div>
+
+    <!-- Security Tools Panel -->
+    <div class="tools-panel" id="toolsPanel">
+      <div class="tools-panel-header">
+        <h2>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <path
+              d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+            ></path>
+          </svg>
+          Security Arsenal
+        </h2>
+        <button class="modal-close" id="toolsPanelClose">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Tools Category Tabs -->
+      <div class="tools-tabs" id="toolsTabs">
+        <button class="tools-tab active" data-category="all">All</button>
+        <button class="tools-tab" data-category="reconnaissance">Recon</button>
+        <button class="tools-tab" data-category="web_security">Web</button>
+        <button class="tools-tab" data-category="exploitation">Exploit</button>
+        <button class="tools-tab" data-category="defense">Defense</button>
+        <button class="tools-tab" data-category="utilities">Utils</button>
+      </div>
+
+      <!-- Tools Grid -->
+      <div class="tools-grid" id="toolsGrid">
+        <!-- Tool cards populated by JS -->
+      </div>
+
+      <!-- Tool Execution Panel (shown when a tool is selected) -->
+      <div class="tool-exec-panel hidden" id="toolExecPanel">
+        <button class="tool-back-btn" id="toolBackBtn">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+          Back to Tools
+        </button>
+        <div class="tool-exec-header" id="toolExecHeader">
+          <!-- Tool name + description -->
+        </div>
+        <div class="tool-exec-form" id="toolExecForm">
+          <!-- Tool parameters rendered here -->
+        </div>
+        <button class="btn-run-tool" id="runToolBtn">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          Execute
+        </button>
+        <div class="tool-output hidden" id="toolOutput">
+          <div class="tool-output-header">
+            <span>Output</span>
+            <button class="tool-copy-btn" id="toolCopyBtn" title="Copy output">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path
+                  d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                ></path>
+              </svg>
+            </button>
+          </div>
+          <pre class="tool-output-content" id="toolOutputContent"></pre>
+        </div>
+      </div>
+    </div>
+    <div class="tools-panel-overlay hidden" id="toolsPanelOverlay"></div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Settings</h2>
+          <button class="modal-close" id="settingsClose">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <!-- Claude API Section -->
+          <div class="settings-section">
+            <h3>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7,11V7a5,5,0,0,1,10,0v4"></path>
+              </svg>
+              Claude API
+            </h3>
+            <p class="settings-desc">
+              Connect to Anthropic's Claude models for advanced AI capabilities.
+            </p>
+            <div class="settings-field">
+              <label for="claudeApiKey">API Key</label>
+              <div class="input-with-btn">
+                <input
+                  type="password"
+                  id="claudeApiKey"
+                  placeholder="sk-ant-..."
+                  autocomplete="off"
+                />
+                <button
+                  class="toggle-vis-btn"
+                  id="toggleApiKeyVis"
+                  title="Show/Hide"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  >
+                    <path
+                      d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                    ></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="settings-field">
+              <label>Status</label>
+              <div class="connection-status" id="claudeStatus">
+                <span class="status-dot disconnected"></span>
+                <span class="status-text">Not connected</span>
+              </div>
+            </div>
+            <button class="btn-primary" id="testClaudeBtn">
+              Test Connection
+            </button>
+          </div>
+
+          <!-- MCP Server Section -->
+          <div class="settings-section">
+            <h3>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                <line x1="6" y1="18" x2="6.01" y2="18"></line>
+              </svg>
+              MCP Servers
+            </h3>
+            <p class="settings-desc">
+              Connect to Model Context Protocol servers to extend Vajra's
+              capabilities with tools and resources.
+            </p>
+
+            <div id="mcpServerList" class="mcp-server-list">
+              <!-- MCP servers rendered here -->
+            </div>
+
+            <div class="add-mcp-form" id="addMcpForm">
+              <div class="settings-field">
+                <label for="mcpServerName">Server Name</label>
+                <input
+                  type="text"
+                  id="mcpServerName"
+                  placeholder="e.g. filesystem"
+                />
+              </div>
+              <div class="settings-field">
+                <label for="mcpTransport">Transport</label>
+                <select id="mcpTransport">
+                  <option value="stdio">stdio (Local command)</option>
+                  <option value="sse">SSE (HTTP URL)</option>
+                </select>
+              </div>
+              <div class="settings-field" id="mcpCommandField">
+                <label for="mcpCommand">Command</label>
+                <input
+                  type="text"
+                  id="mcpCommand"
+                  placeholder="e.g. npx -y @modelcontextprotocol/server-filesystem /path"
+                />
+              </div>
+              <div class="settings-field hidden" id="mcpUrlField">
+                <label for="mcpUrl">Server URL</label>
+                <input
+                  type="text"
+                  id="mcpUrl"
+                  placeholder="http://localhost:3000/sse"
+                />
+              </div>
+              <div class="settings-field">
+                <label for="mcpArgs">Arguments (JSON array, optional)</label>
+                <input type="text" id="mcpArgs" placeholder='["--verbose"]' />
+              </div>
+              <div class="settings-field">
+                <label for="mcpEnv"
+                  >Environment Variables (JSON object, optional)</label
+                >
+                <input
+                  type="text"
+                  id="mcpEnv"
+                  placeholder='{"API_KEY": "value"}'
+                />
+              </div>
+              <button class="btn-primary" id="addMcpBtn">Add MCP Server</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/static/js/chat.js"></script>
+  </body>
+</html>
