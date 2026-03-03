@@ -1783,3 +1783,158 @@ select.tool-param-input {
 #modelSelect:focus {
     box-shadow: 0 0 0 2px rgba(var(--model-accent, 59, 130, 246), 0.3);
 }
+
+/* ── Security Connector Cards ────────────────────────────────────────── */
+.connector-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.connector-card {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    transition: border-color var(--transition);
+}
+
+.connector-card:hover {
+    border-color: var(--accent);
+}
+
+.connector-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.connector-card-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.connector-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.connector-card-info strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.connector-category-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    background: var(--accent-light);
+    padding: 2px 7px;
+    border-radius: var(--radius-full);
+    margin-left: 6px;
+    font-weight: 600;
+}
+
+.connector-card-desc {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    margin: 4px 0 10px;
+    line-height: 1.35;
+}
+
+.connector-card-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.connector-card-actions a.btn-sm {
+    text-decoration: none;
+}
+
+.connector-health-result {
+    margin-top: 8px;
+    font-size: 0.82rem;
+    padding: 6px 10px;
+    background: rgba(0,0,0,0.2);
+    border-radius: var(--radius-sm);
+}
+
+/* Toggle switch */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 42px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-full);
+    transition: background var(--transition);
+}
+
+.toggle-slider::before {
+    content: "";
+    position: absolute;
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background: var(--text-secondary);
+    border-radius: 50%;
+    transition: transform var(--transition), background var(--transition);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background: var(--accent);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(18px);
+    background: #fff;
+}
+
+/* Connector config panel */
+.connector-config-panel {
+    animation: fadeIn 0.15s ease;
+}
+
+.connector-config-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.connector-config-header h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.connector-config-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}

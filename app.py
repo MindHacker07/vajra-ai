@@ -15,16 +15,19 @@ from flask_cors import CORS
 from ai_engine import VajraAI
 from conversation_store import ConversationStore
 from mcp_client import MCPManager
+from connector_manager import ConnectorManager
 from security_tools import TOOLS as SECURITY_TOOLS, run_tool as run_security_tool
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 CORS(app)
 
-# Initialize AI engine, conversation store, and MCP manager
+# Initialize AI engine, conversation store, MCP manager, and connector manager
 ai_engine = VajraAI()
 conversation_store = ConversationStore()
 mcp_manager = MCPManager()
+connector_manager = ConnectorManager()
 ai_engine.mcp_manager = mcp_manager
+ai_engine.connector_manager = connector_manager
 
 
 @app.route("/")
@@ -366,6 +369,74 @@ def execute_security_tool_stream():
         mimetype="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# ── Security Tool Connectors ──────────────────────────────────────────
+
+@app.route("/api/connectors", methods=["GET"])
+def list_connectors():
+    """List all security tool connectors with their status."""
+    return jsonify({"connectors": connector_manager.list_connectors()})
+
+
+@app.route("/api/connectors/<connector_id>/toggle", methods=["POST"])
+def toggle_connector(connector_id):
+    """Enable or disable a connector."""
+    data = request.json or {}
+    enabled = data.get("enabled", False)
+    result = connector_manager.toggle_connector(connector_id, enabled)
+    if result is None:
+        return jsonify({"error": "Connector not found"}), 404
+    return jsonify(result)
+
+
+@app.route("/api/connectors/<connector_id>/config", methods=["PUT"])
+def update_connector_config(connector_id):
+    """Update connector-specific settings (host, port, api_key, etc.)."""
+    data = request.json or {}
+    config = data.get("config", {})
+    result = connector_manager.update_connector_config(connector_id, config)
+    if result is None:
+        return jsonify({"error": "Connector not found"}), 404
+    return jsonify(result)
+
+
+@app.route("/api/connectors/<connector_id>/health", methods=["GET"])
+def connector_health(connector_id):
+    """Run a health check on a specific connector."""
+    result = connector_manager.health_check(connector_id)
+    if "error" in result:
+        return jsonify(result), 404
+    return jsonify({"connector_id": connector_id, "health": result})
+
+
+@app.route("/api/connectors/health", methods=["GET"])
+def all_connectors_health():
+    """Run health checks on all enabled connectors."""
+    return jsonify({"health": connector_manager.health_check_all()})
+
+
+@app.route("/api/connectors/<connector_id>/execute", methods=["POST"])
+def execute_connector_action(connector_id):
+    """Execute an action on a specific connector."""
+    data = request.json or {}
+    action = data.get("action", "")
+    params = data.get("params", {})
+
+    if not action:
+        return jsonify({"error": "Action is required"}), 400
+
+    result = connector_manager.execute(connector_id, action, params)
+    if "error" in result:
+        status_code = 404 if "not found" in result["error"].lower() else 400
+        return jsonify(result), status_code
+    return jsonify({"connector_id": connector_id, "action": action, "result": result})
+
+
+@app.route("/api/connectors/actions", methods=["GET"])
+def list_connector_actions():
+    """List all available actions from enabled connectors."""
+    return jsonify({"actions": connector_manager.get_all_actions()})
 
 
 if __name__ == "__main__":

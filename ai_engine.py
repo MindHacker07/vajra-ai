@@ -181,6 +181,9 @@ class VajraAI:
         # MCP manager reference (set externally)
         self.mcp_manager = None
 
+        # Connector manager reference (set externally)
+        self.connector_manager = None
+
     # ── Active Profile Helpers ─────────────────────────────────────────
 
     def _profile(self):
@@ -348,11 +351,80 @@ class VajraAI:
             if claude_tools:
                 kwargs["tools"] = claude_tools
 
-            with self._claude_client.messages.stream(**kwargs) as stream:
-                for text in stream.text_stream:
-                    yield text
+            # Agentic loop: keep streaming until Claude finishes (handles tool_use)
+            max_tool_rounds = 10
+            for _ in range(max_tool_rounds):
+                response = self._claude_client.messages.create(**kwargs)
+
+                # Process content blocks
+                tool_uses = []
+                for block in response.content:
+                    if block.type == "text":
+                        yield block.text
+                    elif block.type == "tool_use":
+                        tool_uses.append(block)
+
+                # If no tool calls or stop_reason is "end_turn", we're done
+                if response.stop_reason != "tool_use" or not tool_uses:
+                    break
+
+                # Execute tool calls and build tool results
+                assistant_content = []
+                for block in response.content:
+                    if block.type == "text":
+                        assistant_content.append({"type": "text", "text": block.text})
+                    elif block.type == "tool_use":
+                        assistant_content.append({
+                            "type": "tool_use",
+                            "id": block.id,
+                            "name": block.name,
+                            "input": block.input,
+                        })
+
+                tool_results = []
+                for tu in tool_uses:
+                    tool_name = tu.name
+                    tool_input = tu.input or {}
+                    yield f"\n\n🔧 **Using tool:** `{tool_name}`\n"
+                    result = self._execute_tool_call(tool_name, tool_input)
+                    result_text = json.dumps(result, indent=2, default=str)
+                    # Show abbreviated result to user
+                    preview = result_text[:500] + ("..." if len(result_text) > 500 else "")
+                    yield f"```json\n{preview}\n```\n"
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": tu.id,
+                        "content": result_text[:10000],
+                    })
+
+                # Append assistant turn and tool results for next round
+                kwargs["messages"] = kwargs["messages"] + [
+                    {"role": "assistant", "content": assistant_content},
+                    {"role": "user", "content": tool_results},
+                ]
+
         except Exception as e:
             yield f"\n\n**Error communicating with Claude:** {str(e)}"
+
+    def _execute_tool_call(self, tool_name, tool_input):
+        """Execute a tool call from Claude — routes to connectors or MCP tools."""
+        # Check if it's a connector tool (format: connector_id__action)
+        if "__" in tool_name and self.connector_manager:
+            parts = tool_name.split("__", 1)
+            if len(parts) == 2:
+                connector_id, action = parts
+                conn = self.connector_manager.get_connector(connector_id)
+                if conn and conn.enabled:
+                    return self.connector_manager.execute(connector_id, action, tool_input)
+
+        # Otherwise try MCP tools
+        if self.mcp_manager:
+            try:
+                return self.mcp_manager.call_tool(tool_name, tool_input)
+            except Exception:
+                pass
+
+        return {"error": f"Tool '{tool_name}' not found or not available"}
 
     def _build_system_prompt(self):
         profile = self._profile()
@@ -364,20 +436,66 @@ class VajraAI:
                 base += "\n\nYou have access to the following MCP tools:\n"
                 for t in tools:
                     base += f"- **{t['name']}** (server: {t['server_name']}): {t['description']}\n"
+
+        # Include enabled security tool connectors
+        if self.connector_manager:
+            actions = self.connector_manager.get_all_actions()
+            if actions:
+                base += "\n\nYou also have access to the following security tool connectors. "
+                base += "You can invoke these tools to perform security assessments:\n"
+                current_connector = None
+                for a in actions:
+                    if a["connector_name"] != current_connector:
+                        current_connector = a["connector_name"]
+                        base += f"\n**{current_connector}**:\n"
+                    base += f"  - `{a['connector_id']}__{a['action']}`: {a.get('description', a.get('name', ''))}\n"
+                base += (
+                    "\nTo use a connector tool, call it by its full name "
+                    "(e.g. `nmap__quick_scan`) with the required parameters.\n"
+                )
         return base
 
     def _get_claude_tools(self):
-        if not self.mcp_manager:
-            return []
-        tools = self.mcp_manager.get_all_tools()
-        return [
-            {
-                "name": t["name"],
-                "description": t.get("description", ""),
-                "input_schema": t.get("inputSchema", {"type": "object", "properties": {}}),
-            }
-            for t in tools
-        ]
+        tools = []
+
+        # MCP tools
+        if self.mcp_manager:
+            mcp_tools = self.mcp_manager.get_all_tools()
+            tools.extend([
+                {
+                    "name": t["name"],
+                    "description": t.get("description", ""),
+                    "input_schema": t.get("inputSchema", {"type": "object", "properties": {}}),
+                }
+                for t in mcp_tools
+            ])
+
+        # Connector tools
+        if self.connector_manager:
+            for action_info in self.connector_manager.get_all_actions():
+                properties = {}
+                required = []
+                for p in action_info.get("params", []):
+                    prop = {"type": "string", "description": p.get("label", p["name"])}
+                    if p.get("placeholder"):
+                        prop["description"] += f" (e.g. {p['placeholder']})"
+                    if p.get("options"):
+                        prop["enum"] = p["options"]
+                    properties[p["name"]] = prop
+                    if p.get("required"):
+                        required.append(p["name"])
+
+                tools.append({
+                    "name": f"{action_info['connector_id']}__{action_info['action']}",
+                    "description": f"[{action_info['connector_name']}] {action_info.get('description', action_info.get('name', ''))}",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": properties,
+                        "required": required,
+                    },
+                })
+
+        return tools
 
     # ═══════════════════════════════════════════════════════════════════
     #  KNOWLEDGE BASE

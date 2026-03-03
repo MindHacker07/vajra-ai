@@ -1,3 +1,7 @@
 flask>=3.0
 flask-cors>=4.0
 anthropic>=0.40
+
+# Optional — only needed if you want the respective connectors:
+# frida-tools>=12.0        # Frida connector
+# python-nmap>=0.7         # Alternative Nmap integration

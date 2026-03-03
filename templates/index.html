@@ -620,6 +620,58 @@
               <button class="btn-primary" id="addMcpBtn">Add MCP Server</button>
             </div>
           </div>
+
+          <!-- Security Connectors Section -->
+          <div class="settings-section">
+            <h3>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+              Security Connectors
+            </h3>
+            <p class="settings-desc">
+              Enable or disable external security tool integrations. Vajra AI
+              can directly invoke enabled tools during conversations.
+            </p>
+            <div id="connectorList" class="connector-list">
+              <!-- Connectors populated by JS -->
+            </div>
+          </div>
+
+          <!-- Connector Config Modal (inline) -->
+          <div class="connector-config-panel hidden" id="connectorConfigPanel">
+            <div class="connector-config-header">
+              <button class="tool-back-btn" id="connectorConfigBack">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+                Back
+              </button>
+              <h3 id="connectorConfigTitle">Connector Config</h3>
+            </div>
+            <div id="connectorConfigForm" class="connector-config-form">
+              <!-- Config fields populated by JS -->
+            </div>
+            <button class="btn-primary" id="saveConnectorConfig">
+              Save Configuration
+            </button>
+          </div>
         </div>
       </div>
     </div>

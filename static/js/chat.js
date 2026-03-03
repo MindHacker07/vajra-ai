@@ -10,6 +10,7 @@ let conversations = [];
 let mcpServers = [];
 let securityTools = {};
 let currentToolId = null;
+let connectors = [];
 
 // ── DOM Elements ──────────────────────────────────────────────────────
 const $ = (sel) => document.querySelector(sel);
@@ -71,6 +72,7 @@ async function initializeApp() {
     await loadClaudeSettings();
     await loadMcpServers();
     await loadSecurityTools();
+    await loadConnectors();
     configureMarked();
     elements.messageInput.focus();
 }
@@ -158,6 +160,12 @@ function setupEventListeners() {
         tab.classList.add("active");
         renderToolsGrid(tab.dataset.category);
     });
+
+    // Security Connectors
+    const connectorConfigBack = document.getElementById("connectorConfigBack");
+    if (connectorConfigBack) connectorConfigBack.addEventListener("click", closeConnectorConfig);
+    const saveConnectorConfigBtn = document.getElementById("saveConnectorConfig");
+    if (saveConnectorConfigBtn) saveConnectorConfigBtn.addEventListener("click", saveConnectorConfig);
 
     // Close sidebar on mobile when clicking outside
     elements.messagesContainer.addEventListener("click", () => {
@@ -1247,6 +1255,163 @@ function copyToolOutput() {
     navigator.clipboard.writeText(text).then(() => {
         showToast("Output copied to clipboard", "success");
     });
+}
+
+// ── Security Connectors ───────────────────────────────────────────────
+async function loadConnectors() {
+    try {
+        const res = await fetch("/api/connectors");
+        const data = await res.json();
+        connectors = data.connectors || [];
+        renderConnectorList();
+    } catch (err) {
+        console.error("Failed to load connectors:", err);
+    }
+}
+
+function renderConnectorList() {
+    const container = document.getElementById("connectorList");
+    if (!container) return;
+    if (connectors.length === 0) {
+        container.innerHTML = `<div class="mcp-empty">No connectors available.</div>`;
+        return;
+    }
+
+    container.innerHTML = connectors.map(c => `
+        <div class="connector-card" data-id="${c.connector_id}">
+            <div class="connector-card-header">
+                <div class="connector-card-info">
+                    <span class="connector-icon">${c.icon}</span>
+                    <div>
+                        <strong>${escapeHtml(c.name)}</strong>
+                        <span class="connector-category-badge">${escapeHtml(c.category)}</span>
+                    </div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" ${c.enabled ? "checked" : ""}
+                           onchange="toggleConnector('${c.connector_id}', this.checked)" />
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <p class="connector-card-desc">${escapeHtml(c.description)}</p>
+            <div class="connector-card-actions">
+                <button class="btn-sm btn-outline" onclick="checkConnectorHealth('${c.connector_id}')">
+                    Health Check
+                </button>
+                <button class="btn-sm btn-outline" onclick="openConnectorConfig('${c.connector_id}')">
+                    Configure
+                </button>
+                ${c.website ? `<a class="btn-sm btn-outline" href="${escapeHtml(c.website)}" target="_blank" rel="noopener">Docs</a>` : ""}
+            </div>
+            <div class="connector-health-result hidden" id="health-${c.connector_id}"></div>
+        </div>
+    `).join("");
+}
+
+async function toggleConnector(connectorId, enabled) {
+    try {
+        const res = await fetch(`/api/connectors/${connectorId}/toggle`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ enabled }),
+        });
+        const data = await res.json();
+        if (data.error) {
+            showToast(data.error, "error");
+        } else {
+            showToast(`${data.name} ${enabled ? "enabled" : "disabled"}`, "success");
+            await loadConnectors();
+        }
+    } catch (err) {
+        showToast("Failed to toggle connector", "error");
+    }
+}
+
+async function checkConnectorHealth(connectorId) {
+    const el = document.getElementById(`health-${connectorId}`);
+    if (el) {
+        el.classList.remove("hidden");
+        el.innerHTML = `<span class="tool-spinner"></span> Checking...`;
+    }
+    try {
+        const res = await fetch(`/api/connectors/${connectorId}/health`);
+        const data = await res.json();
+        if (el) {
+            const health = data.health || data;
+            const ok = health.ok;
+            el.innerHTML = `<span class="${ok ? "tool-out-success" : "tool-out-error"}">${ok ? "✓" : "✗"} ${escapeHtml(health.message || JSON.stringify(health))}</span>`;
+        }
+    } catch (err) {
+        if (el) el.innerHTML = `<span class="tool-out-error">✗ Health check failed</span>`;
+    }
+}
+
+function openConnectorConfig(connectorId) {
+    const connector = connectors.find(c => c.connector_id === connectorId);
+    if (!connector) return;
+
+    const panel = document.getElementById("connectorConfigPanel");
+    const title = document.getElementById("connectorConfigTitle");
+    const form = document.getElementById("connectorConfigForm");
+    const sections = document.querySelectorAll("#settingsModal .settings-section");
+
+    // Hide settings sections, show config panel
+    sections.forEach(s => s.classList.add("hidden"));
+    panel.classList.remove("hidden");
+    panel.dataset.connectorId = connectorId;
+    title.textContent = `${connector.icon} ${connector.name} Configuration`;
+
+    // Build config form
+    const config = connector.config || {};
+    form.innerHTML = Object.entries(config).map(([key, val]) => {
+        const isSecret = /key|secret|password|token/i.test(key);
+        return `
+            <div class="settings-field">
+                <label for="cc-${key}">${escapeHtml(key)}</label>
+                <input type="${isSecret ? "password" : "text"}" id="cc-${key}"
+                       data-config-key="${key}"
+                       value="${isSecret ? "" : escapeHtml(String(val))}"
+                       placeholder="${isSecret ? "(hidden)" : ""}" />
+            </div>
+        `;
+    }).join("") || `<p class="settings-desc">No configurable options for this connector.</p>`;
+}
+
+function closeConnectorConfig() {
+    const panel = document.getElementById("connectorConfigPanel");
+    const sections = document.querySelectorAll("#settingsModal .settings-section");
+    panel.classList.add("hidden");
+    sections.forEach(s => s.classList.remove("hidden"));
+}
+
+async function saveConnectorConfig() {
+    const panel = document.getElementById("connectorConfigPanel");
+    const connectorId = panel.dataset.connectorId;
+    const inputs = panel.querySelectorAll("[data-config-key]");
+    const config = {};
+    inputs.forEach(input => {
+        const key = input.dataset.configKey;
+        const val = input.value.trim();
+        if (val) config[key] = val;  // Only send non-empty values
+    });
+
+    try {
+        const res = await fetch(`/api/connectors/${connectorId}/config`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ config }),
+        });
+        const data = await res.json();
+        if (data.error) {
+            showToast(data.error, "error");
+        } else {
+            showToast("Configuration saved", "success");
+            await loadConnectors();
+            closeConnectorConfig();
+        }
+    } catch (err) {
+        showToast("Failed to save configuration", "error");
+    }
 }
 
 // ── Toast Notifications ───────────────────────────────────────────────
