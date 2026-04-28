@@ -38,6 +38,11 @@ const elements = {
     toggleApiKeyVis: $("#toggleApiKeyVis"),
     claudeStatus: $("#claudeStatus"),
     testClaudeBtn: $("#testClaudeBtn"),
+    // Local API
+    localApiUrl: $("#localApiUrl"),
+    localApiModel: $("#localApiModel"),
+    localApiStatus: $("#localApiStatus"),
+    testLocalApiBtn: $("#testLocalApiBtn"),
     // MCP
     mcpServerList: $("#mcpServerList"),
     mcpTransport: $("#mcpTransport"),
@@ -70,6 +75,7 @@ async function initializeApp() {
     setupEventListeners();
     await loadConversations();
     await loadClaudeSettings();
+    await loadLocalApiSettings();
     await loadMcpServers();
     await loadSecurityTools();
     await loadConnectors();
@@ -139,6 +145,11 @@ function setupEventListeners() {
     elements.testClaudeBtn.addEventListener("click", testClaudeConnection);
     elements.toggleApiKeyVis.addEventListener("click", toggleApiKeyVisibility);
     elements.claudeApiKey.addEventListener("change", saveClaudeApiKey);
+
+    // Local API
+    elements.testLocalApiBtn.addEventListener("click", testLocalApiConnection);
+    elements.localApiUrl.addEventListener("change", saveLocalApiSettings);
+    elements.localApiModel.addEventListener("change", saveLocalApiSettings);
 
     // MCP
     elements.mcpTransport.addEventListener("change", toggleMcpFields);
@@ -737,6 +748,94 @@ function updateClaudeStatus(state, text) {
 function toggleApiKeyVisibility() {
     const input = elements.claudeApiKey;
     input.type = input.type === "password" ? "text" : "password";
+}
+
+// ── Local API ──────────────────────────────────────────────────────────
+async function loadLocalApiSettings() {
+    try {
+        const res = await fetch("/api/settings/local-api");
+        const data = await res.json();
+        if (data.url) {
+            elements.localApiUrl.value = data.url;
+            elements.localApiModel.value = data.model || "";
+            updateLocalApiStatus("connected", "Configured");
+        } else {
+            elements.localApiUrl.value = "";
+            elements.localApiModel.value = "";
+            updateLocalApiStatus("disconnected", "Not configured");
+        }
+    } catch (err) {
+        console.error("Failed to load Local API settings:", err);
+    }
+}
+
+async function saveLocalApiSettings() {
+    const url = elements.localApiUrl.value.trim();
+    const model = elements.localApiModel.value.trim();
+
+    if (!url || !model) {
+        showToast("API URL and model name are required", "error");
+        return;
+    }
+
+    try {
+        const res = await fetch("/api/settings/local-api", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url, model }),
+        });
+        const data = await res.json();
+        if (data.error) {
+            showToast(data.error, "error");
+        } else {
+            updateLocalApiStatus("connected", "Configured");
+            showToast("Local API configured", "success");
+        }
+    } catch (err) {
+        showToast("Failed to save Local API settings", "error");
+    }
+}
+
+async function testLocalApiConnection() {
+    const url = elements.localApiUrl.value.trim();
+    const model = elements.localApiModel.value.trim();
+
+    if (!url || !model) {
+        showToast("API URL and model name are required", "error");
+        return;
+    }
+
+    // Save settings first
+    await saveLocalApiSettings();
+
+    updateLocalApiStatus("connecting", "Testing connection...");
+    elements.testLocalApiBtn.disabled = true;
+    elements.testLocalApiBtn.textContent = "Testing...";
+
+    try {
+        const res = await fetch("/api/settings/local-api/test", { method: "POST" });
+        const data = await res.json();
+        if (data.success) {
+            updateLocalApiStatus("connected", "Connected ✓");
+            showToast("Local API connection successful!", "success");
+        } else {
+            updateLocalApiStatus("error", data.error || "Connection failed");
+            showToast(data.error || "Connection failed", "error");
+        }
+    } catch (err) {
+        updateLocalApiStatus("error", "Network error");
+        showToast("Network error", "error");
+    }
+
+    elements.testLocalApiBtn.disabled = false;
+    elements.testLocalApiBtn.textContent = "Test Connection";
+}
+
+function updateLocalApiStatus(state, text) {
+    const dot = elements.localApiStatus.querySelector(".status-dot");
+    const label = elements.localApiStatus.querySelector(".status-text");
+    dot.className = "status-dot " + state;
+    label.textContent = text;
 }
 
 // ── MCP Servers ───────────────────────────────────────────────────────

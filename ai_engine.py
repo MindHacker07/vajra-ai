@@ -4,7 +4,7 @@ Three specialized models:
   • Vajra Blue  — Blue Team / Defensive Security (organizational)
   • Vajra Red   — Red Team / Offensive Security (authorized org testing)
   • Vajra Hunter — Security Researcher / Bug Bounty Hunter
-Supports built-in responses, Claude API (Anthropic), and MCP tool integration.
+Supports built-in responses, Claude API (Anthropic), local APIs, and MCP tool integration.
 """
 
 import re
@@ -13,6 +13,9 @@ import random
 import json
 import os
 from datetime import datetime, timedelta
+import urllib.request
+import urllib.error
+import urllib.parse
 
 # Optional: Anthropic SDK
 try:
@@ -178,6 +181,11 @@ class VajraAI:
         self._claude_api_key = None
         self._claude_client = None
 
+        # Local API settings
+        self._local_api_url = None
+        self._local_api_model = None
+        self._local_api_enabled = False
+
         # MCP manager reference (set externally)
         self.mcp_manager = None
 
@@ -236,6 +244,57 @@ class VajraAI:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    # ── Local API ──────────────────────────────────────────────────────
+
+    def set_local_api_config(self, url, model):
+        """Configure local API endpoint and model."""
+        self._local_api_url = url.strip() if url else None
+        self._local_api_model = model.strip() if model else None
+        self._local_api_enabled = bool(self._local_api_url and self._local_api_model)
+
+    def get_local_api_config(self):
+        """Get local API configuration (URL masked)."""
+        if self._local_api_url:
+            masked_url = self._local_api_url.split("://")[0] + "://***" if "://" in self._local_api_url else "***"
+            return {"url": masked_url, "model": self._local_api_model, "enabled": self._local_api_enabled}
+        return {"url": "", "model": "", "enabled": False}
+
+    def test_local_api_connection(self):
+        """Test connection to local API."""
+        if not self._local_api_url or not self._local_api_model:
+            return {"success": False, "error": "API URL and model name are required"}
+
+        try:
+            # Try OpenAI-compatible API format
+            url = self._local_api_url.rstrip("/") + "/v1/chat/completions"
+            payload = {
+                "model": self._local_api_model,
+                "messages": [{"role": "user", "content": "Say 'Connection successful!' in exactly those words."}],
+                "max_tokens": 50,
+                "temperature": 0.7,
+            }
+            
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            
+            with urllib.request.urlopen(req, timeout=10) as response:
+                data = json.loads(response.read().decode("utf-8"))
+                if data.get("choices"):
+                    message = data["choices"][0].get("message", {}).get("content", "")
+                    return {"success": True, "message": message}
+                return {"success": False, "error": "Invalid response format"}
+                
+        except urllib.error.URLError as e:
+            return {"success": False, "error": f"Connection failed: {str(e)}"}
+        except json.JSONDecodeError:
+            return {"success": False, "error": "Invalid JSON response"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
     def set_active_model(self, model_id):
         self._active_model = model_id
 
@@ -244,6 +303,9 @@ class VajraAI:
 
     def _is_claude_model(self):
         return self._active_model.startswith("claude-")
+
+    def _is_local_api_model(self):
+        return self._active_model == "local-api" and self._local_api_enabled
 
     def _get_claude_model_id(self):
         model_map = {
@@ -279,6 +341,14 @@ class VajraAI:
                 "context_window": 32768,
                 "provider": "built-in",
                 "category": "research",
+            },
+            {
+                "id": "local-api",
+                "name": "Local API",
+                "description": "Connect to local LLM (Ollama, LM Studio, vLLM, etc.)",
+                "context_window": 32768,
+                "provider": "local",
+                "requires_config": True,
             },
             {
                 "id": "claude-sonnet-4",
@@ -319,7 +389,9 @@ class VajraAI:
         return "".join(self.stream_response(message, history))
 
     def stream_response(self, message, history=None):
-        if self._is_claude_model() and self._claude_client:
+        if self._is_local_api_model():
+            yield from self._stream_local_api(message, history or [])
+        elif self._is_claude_model() and self._claude_client:
             yield from self._stream_claude(message, history or [])
         else:
             response = self._think_and_respond(message, history or [])
@@ -405,6 +477,57 @@ class VajraAI:
 
         except Exception as e:
             yield f"\n\n**Error communicating with Claude:** {str(e)}"
+
+    def _stream_local_api(self, message, history):
+        """Stream response from local API (OpenAI-compatible format)."""
+        try:
+            messages = []
+            for msg in history:
+                if msg.get("role") in ("user", "assistant"):
+                    messages.append({"role": msg["role"], "content": msg["content"]})
+            if not messages or messages[-1].get("content") != message:
+                messages.append({"role": "user", "content": message})
+
+            system_prompt = self._build_system_prompt()
+            
+            # Call local API with OpenAI-compatible format
+            url = self._local_api_url.rstrip("/") + "/v1/chat/completions"
+            payload = {
+                "model": self._local_api_model,
+                "messages": [{"role": "system", "content": system_prompt}] + messages,
+                "temperature": 0.7,
+                "max_tokens": 8192,
+                "stream": True,
+            }
+            
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            
+            with urllib.request.urlopen(req, timeout=300) as response:
+                for line in response:
+                    line = line.decode("utf-8").strip()
+                    if line.startswith("data: "):
+                        data_str = line[6:]
+                        if data_str == "[DONE]":
+                            break
+                        try:
+                            data = json.loads(data_str)
+                            if data.get("choices"):
+                                choice = data["choices"][0]
+                                delta = choice.get("delta", {})
+                                if "content" in delta:
+                                    yield delta["content"]
+                        except json.JSONDecodeError:
+                            pass
+                            
+        except urllib.error.URLError as e:
+            yield f"\n\n**Error connecting to local API:** {str(e)}"
+        except Exception as e:
+            yield f"\n\n**Error communicating with local API:** {str(e)}"
 
     def _execute_tool_call(self, tool_name, tool_input):
         """Execute a tool call from Claude — routes to connectors or MCP tools."""

@@ -228,6 +228,43 @@ def test_claude_connection():
     return jsonify(result)
 
 
+# ── Local API Settings ─────────────────────────────────────────────────
+
+@app.route("/api/settings/local-api", methods=["GET"])
+def get_local_api_settings():
+    """Get local API settings."""
+    config = ai_engine.get_local_api_config()
+    return jsonify(config)
+
+
+@app.route("/api/settings/local-api", methods=["POST"])
+def set_local_api_settings():
+    """Set the local API configuration."""
+    data = request.json or {}
+    url = data.get("url", "").strip()
+    model = data.get("model", "").strip()
+    
+    if not url or not model:
+        return jsonify({"error": "API URL and model name are required"}), 400
+    
+    ai_engine.set_local_api_config(url, model)
+    return jsonify({"message": "Local API configured", "config": ai_engine.get_local_api_config()})
+
+
+@app.route("/api/settings/local-api", methods=["DELETE"])
+def clear_local_api_settings():
+    """Clear the local API configuration."""
+    ai_engine.set_local_api_config(None, None)
+    return jsonify({"message": "Local API configuration cleared"})
+
+
+@app.route("/api/settings/local-api/test", methods=["POST"])
+def test_local_api_connection():
+    """Test the local API connection."""
+    result = ai_engine.test_local_api_connection()
+    return jsonify(result)
+
+
 # ── MCP Server Management ─────────────────────────────────────────────
 
 @app.route("/api/mcp/servers", methods=["GET"])

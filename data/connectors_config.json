@@ -1,0 +1,77 @@
+{
+  "connectors": {
+    "owasp_zap": {
+      "enabled": false,
+      "config": {
+        "host": "http://localhost",
+        "port": "8080",
+        "api_key": ""
+      }
+    },
+    "burpsuite": {
+      "enabled": false,
+      "config": {
+        "host": "http://localhost",
+        "port": "1337",
+        "api_key": ""
+      }
+    },
+    "nmap": {
+      "enabled": false,
+      "config": {
+        "nmap_path": "",
+        "default_timing": "T3"
+      }
+    },
+    "nuclei": {
+      "enabled": false,
+      "config": {
+        "nuclei_path": "",
+        "templates_path": "",
+        "rate_limit": "150",
+        "concurrency": "25"
+      }
+    },
+    "ffuf": {
+      "enabled": false,
+      "config": {
+        "ffuf_path": "",
+        "wordlist_dir": "",
+        "default_wordlist": "",
+        "threads": "40",
+        "rate_limit": "0"
+      }
+    },
+    "sqlmap": {
+      "enabled": false,
+      "config": {
+        "sqlmap_path": "",
+        "python_path": "",
+        "default_level": "1",
+        "default_risk": "1",
+        "tamper_scripts": ""
+      }
+    },
+    "frida": {
+      "enabled": false,
+      "config": {
+        "frida_path": "",
+        "device": ""
+      }
+    },
+    "android_emulator": {
+      "enabled": false,
+      "config": {
+        "adb_path": "",
+        "emulator_path": "",
+        "device_serial": ""
+      }
+    },
+    "kali_tools": {
+      "enabled": false,
+      "config": {
+        "tools_prefix": ""
+      }
+    }
+  }
+}
